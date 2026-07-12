@@ -8,7 +8,7 @@ env:
   REGISTRY: docker.io
   # Replace 'your-dockerhub-username' with your actual Docker Hub username, 
   # and 'your-repo-name' with what you want the image called.
-  IMAGE_NAME: your-dockerhub-username/your-repo-name
+  IMAGE_NAME: sajib25/CrisisDeskAI
 
 jobs:
   build-and-push:
