@@ -43,7 +43,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push # Ensures deployment ONLY happens if the Docker build succeeds!
     steps:
+      - name: Skip deploy when VM secrets are missing
+        if: ${{ secrets.VM_HOST == '' || secrets.VM_USERNAME == '' || secrets.SSH_PRIVATE_KEY == '' }}
+        run: echo "Deployment skipped because required VM secrets are not configured."
+
       - name: Deploy to Azure VM via SSH
+        if: ${{ secrets.VM_HOST != '' && secrets.VM_USERNAME != '' && secrets.SSH_PRIVATE_KEY != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
