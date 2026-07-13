@@ -59,23 +59,6 @@ Supporting features:
 ### System / Data Flow
 
 ```mermaid
-flowchart LR
-  Client[Citizen / Admin Client] --> API[FastAPI]
-  API --> Validate[Pydantic Validation]
-  Validate --> Translate[Translation Service]
-  Translate --> Geo[Geocoding Service]
-  Geo --> Weather[Weather Context Service]
-  Weather --> Classify[Classifier]
-  Classify --> Dedupe[Duplicate Detection]
-  Dedupe --> DB[(PostgreSQL)]
-  DB --> Analytics[Stats & Filters]
-  API --> Auth[JWT Admin Auth]
-  Auth --> DB
-```
-
-### Request Sequence
-
-```mermaid
 graph TD
     %% Styling
     classDef client fill:#f9f,stroke:#333,stroke-width:2px;
@@ -116,6 +99,55 @@ graph TD
     D -->|6. Check / Deduplicate| P
     A ==>|7. Persist Clean Report| P
     A ==>|8. Return Structured JSON| C
+```
+
+### Request Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    participant Client as Citizen App
+    participant API as FastAPI Endpoint
+    participant Engine as Validation Engine
+    participant Dup as Duplicate Detector
+    participant Ext as External APIs
+    participant DB as PostgreSQL DB
+
+    Client->>API: POST /api/reports (JSON payload)
+    activate API
+    
+    API->>Engine: Forward raw report data
+    activate Engine
+    
+    rect rgb(240, 240, 240)
+        Note right of Engine: Parallel Enrichment Phase
+        Engine->>Ext: Translate text
+        Ext-->>Engine: English text
+        Engine->>Ext: Geocode location
+        Ext-->>Engine: Lat/Lng coordinates
+        Engine->>Ext: Fetch contextual data
+        Ext-->>Engine: Weather/Environmental data
+        Engine->>Ext: LLM Classification
+        Ext-->>Engine: Category, Urgency, Summary
+    end
+    
+    Engine->>Dup: Pass enriched data
+    activate Dup
+    deactivate Engine
+    
+    Dup->>DB: Query similar records (Dedupe)
+    DB-->>Dup: Check result
+    Dup-->>API: Return triage-ready record
+    deactivate Dup
+    
+    API->>DB: Insert Final Record
+    activate DB
+    DB-->>API: Confirmation (UUID)
+    deactivate DB
+    
+    API-->>Client: 200 OK (Structured JSON)
+    deactivate API
 
 ```
 
