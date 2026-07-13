@@ -76,50 +76,46 @@ flowchart LR
 ### Request Sequence
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    
-    participant Client as Citizen App
-    participant API as FastAPI Endpoint
-    participant Engine as Validation Engine
-    participant Dup as Duplicate Detector
-    participant Ext as External APIs
-    participant DB as PostgreSQL DB
+graph TD
+    %% Styling
+    classDef client fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef backend fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef service fill:#fdf,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5;
+    classDef DB fill:#f96,stroke:#333,stroke-width:2px;
 
-    Client->>API: POST /api/reports (JSON payload)
-    activate API
+    %% Components
+    C["📱 Citizen / Admin Client"]:::client
+    P[("💾 PostgreSQL Database\n(Storage & Analytics)")]:::DB
     
-    API->>Engine: Forward raw report data
-    activate Engine
-    
-    rect rgb(240, 240, 240)
-        Note right of Engine: Parallel Enrichment Phase
-        Engine->>Ext: Translate text
-        Ext-->>Engine: English text
-        Engine->>Ext: Geocode location
-        Ext-->>Engine: Lat/Lng coordinates
-        Engine->>Ext: Fetch contextual data
-        Ext-->>Engine: Weather/Environmental data
-        Engine->>Ext: LLM Classification
-        Ext-->>Engine: Category, Urgency, Summary
+    subgraph FastAPI_Backend ["⚡ FastAPI Application Core"]
+        A["🛡️ API Gateway\n& JWT Admin Auth"]
+        V["⚙️ Validation & Normalization\n(Pydantic Engine)"]
+        D["🔂 Duplicate Detection\nModule"]
+        
+        A --> V
+        V --> D
     end
+    class FastAPI_Backend backend;
+
+    subgraph External_Services ["🌐 Enrichment & AI Services"]
+        T["🗣️ Translation Service\n(Bangla ➡️ English)"]
+        G["📍 Geocoding Service\n(Location ➡️ Coordinates)"]
+        W["🌤️ Weather API\n(Contextual Data)"]
+        L["🤖 LLM Classifier\n(Category & Urgency)"]
+    end
+    class External_Services service;
+
+    %% Connections / Data Flow
+    C ==>|1. POST /api/reports| A
     
-    Engine->>Dup: Pass enriched data
-    activate Dup
-    deactivate Engine
+    V -->|2. Translate| T
+    V -->|3. Geocode| G
+    V -->|4. Fetch Context| W
+    V -->|5. Analyze & Classify| L
     
-    Dup->>DB: Query similar records (Dedupe)
-    DB-->>Dup: Check result
-    Dup-->>API: Return triage-ready record
-    deactivate Dup
-    
-    API->>DB: Insert Final Record
-    activate DB
-    DB-->>API: Confirmation (UUID)
-    deactivate DB
-    
-    API-->>Client: 200 OK (Structured JSON)
-    deactivate API
+    D -->|6. Check / Deduplicate| P
+    A ==>|7. Persist Clean Report| P
+    A ==>|8. Return Structured JSON| C
 
 ```
 
